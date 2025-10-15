@@ -1,0 +1,64 @@
+html_code = """<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>스마일 캡처 앱</title>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <style>
+    body { text-align: center; background: #222; color: #fff; font-family: sans-serif; }
+    video, canvas { border-radius: 10px; margin-top: 10px; }
+    button { margin-top: 15px; padding: 10px 20px; border: none; border-radius: 8px; background: #0b84ff; color: white; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <h2>스마일 캡처 앱</h2>
+  <p>웃으면 자동으로 감지돼요!</p>
+  <video id="video" width="320" height="240" autoplay muted></video>
+  <canvas id="overlay" width="320" height="240"></canvas>
+  <button id="capture">사진 저장하기</button>
+  <script>
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    const context = overlay.getContext('2d');
+
+    Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights/'),
+      faceapi.nets.faceExpressionNet.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights/')
+    ]).then(startVideo);
+
+    function startVideo() {
+      navigator.mediaDevices.getUserMedia({ video: {} })
+        .then(stream => video.srcObject = stream)
+        .catch(err => alert("카메라 접근 실패: " + err));
+    }
+
+    video.addEventListener('play', () => {
+      const displaySize = { width: video.width, height: video.height };
+      setInterval(async () => {
+        const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceExpressions();
+        context.clearRect(0, 0, overlay.width, overlay.height);
+        const resized = faceapi.resizeResults(detections, displaySize);
+        faceapi.draw.drawDetections(overlay, resized);
+        faceapi.draw.drawFaceExpressions(overlay, resized);
+
+        if (detections[0] && detections[0].expressions.happy > 0.9) {
+          console.log("Smile detected!");
+        }
+      }, 300);
+    });
+
+    document.getElementById('capture').addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.href = overlay.toDataURL('image/png');
+      link.download = 'smile.png';
+      link.click();
+    });
+  </script>
+</body>
+</html>"""
+
+with open("index.html", "w", encoding="utf-8") as f:
+    f.write(html_code)
+
+print("index.html 파일 생성 완료!")
