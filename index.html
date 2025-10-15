@@ -1,0 +1,115 @@
+from getpass import getpass
+
+# GitHub 계정 입력
+GITHUB_USERNAME = input("GitHub 사용자 이름을 입력하세요 (예: msch111): ")
+REPO_NAME = "smile-capture"
+TOKEN = getpass("GitHub Access Token을 입력하세요: ")
+
+
+---------------------------------------------
+
+
+#  Git 환경 설정
+!git config --global user.name "{msch111}"
+!git config --global user.email "{msch111}@users.noreply.github.com"
+
+
+
+----------------------------------
+
+
+# 작업 폴더 초기화
+!rm -rf {smile-capture}
+!mkdir {smile-capture}
+%cd {smile-capture}
+!git init
+!git branch -M main
+
+print("새 GitHub 저장소 폴더가 준비되었습니다.")
+
+-----------------------------------
+
+html_code = """<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>스마일 캡처 앱</title>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <style>
+    body { text-align: center; background: #222; color: #fff; font-family: sans-serif; }
+    video, canvas { border-radius: 10px; margin-top: 10px; }
+    button { margin-top: 15px; padding: 10px 20px; border: none; border-radius: 8px; background: #0b84ff; color: white; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <h2>스마일 캡처 앱</h2>
+  <p>웃으면 자동으로 감지돼요!</p>
+  <video id="video" width="320" height="240" autoplay muted></video>
+  <canvas id="overlay" width="320" height="240"></canvas>
+  <button id="capture">사진 저장하기</button>
+  <script>
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('overlay');
+    const context = overlay.getContext('2d');
+
+    Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights/'),
+      faceapi.nets.faceExpressionNet.loadFromUri('https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights/')
+    ]).then(startVideo);
+
+    function startVideo() {
+      navigator.mediaDevices.getUserMedia({ video: {} })
+        .then(stream => video.srcObject = stream)
+        .catch(err => alert("카메라 접근 실패: " + err));
+    }
+
+    video.addEventListener('play', () => {
+      const displaySize = { width: video.width, height: video.height };
+      setInterval(async () => {
+        const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions()).withFaceExpressions();
+        context.clearRect(0, 0, overlay.width, overlay.height);
+        const resized = faceapi.resizeResults(detections, displaySize);
+        faceapi.draw.drawDetections(overlay, resized);
+        faceapi.draw.drawFaceExpressions(overlay, resized);
+
+        if (detections[0] && detections[0].expressions.happy > 0.9) {
+          console.log("Smile detected!");
+        }
+      }, 300);
+    });
+
+    document.getElementById('capture').addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.href = overlay.toDataURL('image/png');
+      link.download = 'smile.png';
+      link.click();
+    });
+  </script>
+</body>
+</html>"""
+
+with open("index.html", "w", encoding="utf-8") as f:
+    f.write(html_code)
+
+print("index.html 파일 생성 완료!")
+
+
+---------------------------------------------------
+
+GITHUB_USERNAME = "msch111"  # 본인 아이디
+REPO_NAME = "smile-capture"
+
+# 기존 remote 제거
+!git remote remove origin
+
+# remote origin 추가 (f-string 사용)
+!git remote add origin https://{GITHUB_USERNAME}:{TOKEN}@github.com/{GITHUB_USERNAME}/{REPO_NAME}.git
+
+# git push
+!git push -u origin main
+
+# 링크 출력
+print(f"GitHub 업로드 완료!\n\n저장소 링크:\nhttps://github.com/{GITHUB_USERNAME}/{REPO_NAME}")
+
+--------------------------------------------------
